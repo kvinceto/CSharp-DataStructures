@@ -1,15 +1,13 @@
-﻿using System.Linq;
-
-namespace Tree
+﻿namespace Tree
 {
     using System;
     using System.Collections.Generic;
 
     public class Tree<T> : IAbstractTree<T>
     {
-        private Tree<T> parent;
-        private T value;
         private List<Tree<T>> children;
+        private T value;
+        private Tree<T> parent;
 
         public Tree(T value)
         {
@@ -22,14 +20,75 @@ namespace Tree
         {
             foreach (var child in children)
             {
-                this.parent = this;
+                child.parent = this;
                 this.children.Add(child);
             }
+        }
+
+        public IEnumerable<T> OrderBfs()
+        {
+            var queue = new Queue<Tree<T>>();
+            var result = new List<T>();
+
+            queue.Enqueue(this);
+
+            while (queue.Count > 0)
+            {
+                var subtree = queue.Dequeue();
+                result.Add(subtree.value);
+
+                foreach (var child in subtree.children)
+                {
+                    queue.Enqueue(child);
+                }
+            }
+
+            return result;
+        }
+
+        private void Dfs(Tree<T> node, ICollection<T> result)
+        {
+            foreach (var child in node.children)
+            {
+                this.Dfs(child, result);
+            }
+
+            result.Add(node.value);
+        }
+
+
+        public IEnumerable<T> OrderDfs()
+        {
+            var list = new List<T>();
+            this.Dfs(this, list);
+            return list;
+        }
+
+        private IEnumerable<T> DfsWithStack()
+        {
+            var result = new Stack<T>();
+            var stack = new Stack<Tree<T>>();
+            stack.Push(this);
+
+            while (stack.Count > 0)
+            {
+                var node = stack.Pop();
+
+                foreach (var child in node.children)
+                {
+                    stack.Push(child);
+                }
+
+                result.Push(node.value);
+            }
+
+            return result;
         }
 
         public void AddChild(T parentKey, Tree<T> child)
         {
             var parentNode = this.FindNodeWithBfs(parentKey);
+
             if (parentNode is null)
             {
                 throw new ArgumentNullException();
@@ -44,12 +103,16 @@ namespace Tree
             var queue = new Queue<Tree<T>>();
 
             queue.Enqueue(this);
+
             while (queue.Count > 0)
             {
                 var subtree = queue.Dequeue();
 
                 if (subtree.value.Equals(parentKey))
+                {
                     return subtree;
+                }
+
                 foreach (var child in subtree.children)
                 {
                     queue.Enqueue(child);
@@ -59,89 +122,48 @@ namespace Tree
             return null;
         }
 
-        public IEnumerable<T> OrderBfs()
-        {
-            var queue = new Queue<Tree<T>>();
-            queue.Enqueue(this);
-            var result = new List<T>();
-            while (queue.Count > 0)
-            {
-                var subtree = queue.Dequeue();
-                result.Add(subtree.value);
-
-                foreach (var child in subtree.children)
-                {
-                    queue.Enqueue(child);
-                }
-            }
-
-            return result;
-        }
-        public IEnumerable<T> OrderDfs()
-        {
-            var result = new Stack<T>();
-            var stack = new Stack<Tree<T>>();
-            stack.Push(this);
-
-            while (stack.Count > 0)
-            {
-                var node = stack.Pop();
-                foreach (var child in node.children)
-                {
-                    stack.Push(child);
-
-                }
-                result.Push(node.value);
-            }
-            return result;
-        }
-        public IEnumerable<T> OrderDfsRecursive()
-        {
-            var list = new List<T>();
-            this.DfsRecursive(this, list);
-            return list;
-        }
-
-        private void DfsRecursive(Tree<T> node, ICollection<T> result)
-        {
-            foreach (var child in node.children)
-            {
-                this.DfsRecursive(child, result);
-            }
-
-            result.Add(node.value);
-        }
         public void RemoveNode(T nodeKey)
         {
-            var nodeToRemove = this.FindNodeWithBfs(nodeKey);
-            if (nodeToRemove == null)
-                throw new ArgumentNullException();
+            var toBeDeletedNode = FindNodeWithBfs(nodeKey);
 
-            var parentNode = nodeToRemove.parent;
+            if (toBeDeletedNode is null)
+            {
+                throw new ArgumentNullException();
+            }
+
+            var parentNode = toBeDeletedNode.parent;
+
             if (parentNode is null)
-                throw new ArgumentNullException();
+            {
+                throw new ArgumentException();
+            }
 
-            parentNode.children = parentNode.children
-                .Where(n => !n.value.Equals(nodeKey))
-                .ToList();
-            nodeToRemove.parent = null;
+            parentNode.children.Remove(toBeDeletedNode);
         }
 
         public void Swap(T firstKey, T secondKey)
         {
             var firstNode = this.FindNodeWithBfs(firstKey);
             var secondNode = this.FindNodeWithBfs(secondKey);
+
             if (firstNode is null || secondNode is null)
+            {
                 throw new ArgumentNullException();
+            }
+
             var firstParent = firstNode.parent;
             var secondParent = secondNode.parent;
             if (firstParent is null || secondParent is null)
+            {
                 throw new ArgumentException();
+            }
+
             var indexOfFirstChild = firstParent.children.IndexOf(firstNode);
             var indexOfSecondChild = secondParent.children.IndexOf(secondNode);
 
             firstParent.children[indexOfFirstChild] = secondNode;
             secondNode.parent = firstParent;
+
             secondParent.children[indexOfSecondChild] = firstNode;
             firstNode.parent = secondParent;
         }
